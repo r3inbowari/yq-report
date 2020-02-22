@@ -1,0 +1,12 @@
+{
+  # 账号
+  "username": "xxxxxxxxxx",
+  # 密码
+  "password": "123456789",
+  # 城市
+  "city": "深圳市",
+  # 回校方式
+  "toSchool": "私家车",
+  # 街道
+  "town": "深圳市龙岗区"
+}
