@@ -1,12 +1,14 @@
 {
   # 账号
-  "username": "xxxxxxxxxx",
+  "username": "17034520112",
   # 密码
-  "password": "123456789",
+  "password": "123456",
   # 城市
-  "city": "深圳市",
+  "city": "茂名市",
   # 回校方式
   "toSchool": "私家车",
   # 街道
-  "town": "深圳市龙岗区"
+  "town": "石油六公司宿舍区",
+  # 方糖
+  "fangTang": "SCU37997Tdfdc86bf6a3f4d8b785de3c2f20d91fe5c1b7d3f9d7b6"
 }

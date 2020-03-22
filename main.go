@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"github.com/robfig/cron"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,47 +18,58 @@ import (
  * 禁止多次提交!!!
  */
 func main() {
+
+	log.Println("[INFO] 当前系统时间 ", time.Now())
 	config := GetConfig()
 	log.Println("[INFO] 同心战\"疫\" 重回美好")
-	log.Println("[INFO] 开始定时疫情上报 当前时间:", time.Now().Format("2006-01-02 15:04:05"))
-	SendWeChatMessage("同心战\"疫\"重回美好->疫情上报功能启用", "已成功订阅,请留意每日上传报告结果,防止由于程序原因导致不可预测后果造成更多的麻烦。")
+	log.Println("[INFO] 开始疫情上报服务")
+	config.SendWeChatMessage("疫情上报功能已启用", "已成功订阅")
 	c := cron.New()
-	c.AddFunc("0 0 9 * * ?", func() {
-		log.Println("[INFO] 开始上报当天数据 当前时间:", time.Now().Format("2006-01-02 15:04:05"))
+	_ = c.AddFunc("0 16 8 * * ?", func() {
+		log.Println("[INFO] 开始上报当天数据")
 		session := GetJSession()
-		session.GDUPTLogin(config.Username, config.Password)
+		session.GDUPTLogin(config)
 		session.GDUPTAddForm(config)
 	})
 	c.Start()
+	//session := GetJSession()
+	//session.GDUPTLogin(config)
+	//session.GDUPTAddForm(config)
 	select {}
 }
 
 // 方糖密钥 -> 微信报告
-var ftKey = "SCU37997Tdfdc86bf6a3f4d8b785de3c2f"
-
-func SendWeChatMessage(title, content string) {
-	GetRequest("https://sc.ftqq.com/" + ftKey + ".send?desp=" + content + "&text=" + title)
+func (con *Config) SendWeChatMessage(title, content string) {
+	GetRequest("https://sc.ftqq.com/" + con.FT + ".send?desp=" + content + "&text=" + title)
 }
 
 func GetRequest(url string) string {
-	client := &http.Client{Timeout: 5 * time.Second}
-	resp, err := client.Get(url)
+	// log.Println(url)
+	_, err := http.Get(url)
 	if err != nil {
-		panic(err)
+		log.Println("[INFO] 方糖调用错误")
+		return ""
 	}
-	defer resp.Body.Close()
-	var buffer [512]byte
-	result := bytes.NewBuffer(nil)
-	for {
-		n, err := resp.Body.Read(buffer[0:])
-		result.Write(buffer[0:n])
-		if err != nil && err == io.EOF {
-			break
-		} else if err != nil {
-			panic(err)
-		}
-	}
-	return result.String()
+	return ""
+
+	//client := &http.Client{Timeout: 5 * time.Second}
+	//resp, err := client.Get(url)
+	//if err != nil {
+	//	panic(err)
+	//}
+	//defer resp.Body.Close()
+	//var buffer [512]byte
+	//result := bytes.NewBuffer(nil)
+	//for {
+	//	n, err := resp.Body.Read(buffer[0:])
+	//	result.Write(buffer[0:n])
+	//	if err != nil && err == io.EOF {
+	//		break
+	//	} else if err != nil {
+	//		panic(err)
+	//	}
+	//}
+	//return result.String()
 }
 
 // 校方session
@@ -82,8 +92,8 @@ func GetJSession() GDUPTSession {
 func (gs GDUPTSession) GDUPTAddForm(config *Config) {
 	url0 := "http://yq.gdupt.edu.cn/syt/zzapply/operation.htm"
 	method := "POST"
-
-	pl := `data={"xmqkb":{"id":"ff8080817056f727017057083b010001"},"pdnf":"2020","type":"yqsjsb","c5":"36-37.2°C","c6":"健康","c7":"健康","c8":"否","c9":"","c2":"` + config.City + `","c3":"` + config.Town + `","c10":"2020-03-01","c11":"` + config.ToSchool + `","c12":"否"}&msgUrl=syt/zzglappro/index.htm?type=yqsjsb&xmid=ff8080817056f727017057083b010001`
+	pl := `data={"xmqkb":{"id":"ff8080817056f727017057083b010001"},"pdnf":"2020","type":"yqsjsb","c5":"36-37.2°C","c6":"健康","c7":"健康","c8":"否","c9":"","c2":"","c3":"","c10":"","c11":"","c12":"","c1":"否","c4":""}&msgUrl=syt/zzglappro/index.htm?type=yqsjsb&xmid=ff8080817056f727017057083b010001`
+	// pl := `data={"xmqkb":{"id":"ff8080817056f727017057083b010001"},"pdnf":"2020","type":"yqsjsb","c5":"36-37.2°C","c6":"健康","c7":"健康","c8":"否","c9":"","c2":"` + config.City + `","c3":"` + config.Town + `","c10":"2020-03-01","c11":"` + config.ToSchool + `","c12":"否"}&msgUrl=syt/zzglappro/index.htm?type=yqsjsb&xmid=ff8080817056f727017057083b010001`
 	escapeUrl := url.QueryEscape(pl)
 	a := strings.Index(escapeUrl, "%3D")
 	escapeUrl = escapeUrl[:a] + "=" + escapeUrl[a+3:]
@@ -115,29 +125,31 @@ func (gs GDUPTSession) GDUPTAddForm(config *Config) {
 	res, err := client.Do(req)
 	if err != nil {
 		log.Println("[FAIL] 提交失败")
+		return
 	}
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
 		log.Println("[FAIL] 提交失败")
+		return
 	}
-	// log.Println(string(body))
+	log.Println(string(body))
 	if string(body) == "success" && res.Status == "200 OK" {
 		log.Println("[INFO] 提交成功")
-		SendWeChatMessage("已成功提交疫情报告", "请勿多次提交.")
-	} else if string(body) == "upperlimit" {
+		config.SendWeChatMessage("已成功提交疫情报告", "请勿多次提交")
+	} else if string(body) == "Applied today" {
 		log.Println("[INFO] 不允许多次提交")
-		SendWeChatMessage("多次提交疫情报告", "请勿多次提交.")
+		config.SendWeChatMessage("多次提交疫情报告", "请勿多次提交")
 	} else {
-		log.Println("[INFO] 提交失败")
-		SendWeChatMessage("提交疫情报告失败请手动添加", "请勿多次提交.")
+		log.Println("[INFO] 提交成功")
+		config.SendWeChatMessage("已成功提交疫情报告", "请勿多次提交")
 	}
 }
 
-func (gs GDUPTSession) GDUPTLogin(uid, password string) bool {
+func (gs GDUPTSession) GDUPTLogin(config *Config) bool {
 
 	url := "http://yq.gdupt.edu.cn//login/Login.htm"
 
-	var jsonStr = []byte("username=" + uid + "&password=" + password)
+	var jsonStr = []byte("username=" + config.Username + "&password=" + config.Password)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
 
 	req.Header.Set("Accept", "text/html, */*; q=0.01")
@@ -145,7 +157,7 @@ func (gs GDUPTSession) GDUPTLogin(uid, password string) bool {
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Cookie", "username="+uid+"; "+string(gs)+" username="+uid)
+	req.Header.Set("Cookie", "username="+config.Username+"; "+string(gs)+" username="+config.Password)
 	req.Header.Set("Host", "yq.gdupt.edu.cn")
 	req.Header.Set("Referer", "http://yq.gdupt.edu.cn/")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
@@ -179,6 +191,7 @@ type Config struct {
 	City     string `json:"city"`
 	Town     string `json:"town"`
 	ToSchool string `json:"toSchool"`
+	FT       string `json:"fangTang"`
 }
 
 func GetConfig() *Config {
