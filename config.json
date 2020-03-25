@@ -1,14 +1,44 @@
 {
-  # 账号
-  "username": "17034520112",
-  # 密码
-  "password": "123456",
-  # 城市
-  "city": "茂名市",
-  # 回校方式
-  "toSchool": "私家车",
-  # 街道
-  "town": "石油六公司宿舍区",
-  # 方糖
-  "fangTang": "SCU37997Tdfdc86bf6a3f4d8b785de3c2f20d91fe5c1b7d3f9d7b6"
+  "configs": [
+    {
+      "username": "17034520112",
+      "password": "123456",
+      "city": "未知",
+      "toSchool": "未知",
+      "town": "未知",
+      "fangTang": "SCU37997Tdfdc86bf6a3f4d8b785de3c2f20d91fe5c1b7d3f9d7b6",
+      "cron": "0 1 8 * * ?",
+      "name": "陈海滨"
+    },
+    {
+      "username": "17034520131",
+      "password": "123456",
+      "city": "未知",
+      "toSchool": "未知",
+      "town": "未知",
+      "fangTang": "SCU37997Tdfdc86bf6a3f4d8b785de3c2f20d91fe5c1b7d3f9d7b6",
+      "cron": "0 16 8 * * ?",
+      "name": "庞立晓"
+    },
+    {
+      "username": "17034250122",
+      "password": "123456",
+      "city": "未知",
+      "toSchool": "未知",
+      "town": "未知",
+      "fangTang": "SCU37997Tdfdc86bf6a3f4d8b785de3c2f20d91fe5c1b7d3f9d7b6",
+      "cron": "0 31 8 * * ?",
+      "name": "林永强"
+    },
+    {
+      "username": "17034520126",
+      "password": "123456",
+      "city": "未知",
+      "toSchool": "未知",
+      "town": "未知",
+      "fangTang": "SCU37997Tdfdc86bf6a3f4d8b785de3c2f20d91fe5c1b7d3f9d7b6",
+      "cron": "0 46 8 * * ?",
+      "name": "卢家乐"
+    }
+  ]
 }

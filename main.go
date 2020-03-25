@@ -6,6 +6,7 @@ import (
 	"github.com/robfig/cron"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"os"
@@ -18,24 +19,29 @@ import (
  * 禁止多次提交!!!
  */
 func main() {
-
-	log.Println("[INFO] 当前系统时间 ", time.Now())
-	config := GetConfig()
-	log.Println("[INFO] 同心战\"疫\" 重回美好")
-	log.Println("[INFO] 开始疫情上报服务")
-	config.SendWeChatMessage("疫情上报功能已启用", "已成功订阅")
-	c := cron.New()
-	_ = c.AddFunc("0 16 8 * * ?", func() {
-		log.Println("[INFO] 开始上报当天数据")
-		session := GetJSession()
-		session.GDUPTLogin(config)
-		session.GDUPTAddForm(config)
-	})
-	c.Start()
-	//session := GetJSession()
-	//session.GDUPTLogin(config)
-	//session.GDUPTAddForm(config)
+	log.Println("[INFO] 当前系统时间:", time.Now().Format("2006-01-02 15:04:05"))
+	log.Println("[INFO] 疫情上报服务: 启用")
+	configs := GetConfig()
+	for _, config := range configs.Config {
+		log.Println("[INFO] 成功注册: " + config.Name + config.Username)
+		config.SendWeChatMessage(config.Name+config.Username+"成功注册", "已成功订阅")
+		c := cron.New()
+		_ = c.AddFunc(config.Cron, func() {
+			log.Println("[INFO] 开始上报: " + config.Name + config.Username)
+			session := GetJSession(config)
+			session.GDUPTLogin(config)
+			session.GDUPTAddForm(config)
+		})
+		c.Start()
+	}
 	select {}
+}
+
+// 随机睡眠延时
+func RandomSleep(max int) {
+	rand.Seed(time.Now().UnixNano())
+	randTime := time.Duration(rand.Intn(max)) * time.Second
+	time.Sleep(randTime)
 }
 
 // 方糖密钥 -> 微信报告
@@ -43,49 +49,30 @@ func (con *Config) SendWeChatMessage(title, content string) {
 	GetRequest("https://sc.ftqq.com/" + con.FT + ".send?desp=" + content + "&text=" + title)
 }
 
-func GetRequest(url string) string {
-	// log.Println(url)
+func GetRequest(url string) {
 	_, err := http.Get(url)
 	if err != nil {
-		log.Println("[INFO] 方糖调用错误")
-		return ""
+		log.Println("[FAIL] 方糖调用错误")
 	}
-	return ""
-
-	//client := &http.Client{Timeout: 5 * time.Second}
-	//resp, err := client.Get(url)
-	//if err != nil {
-	//	panic(err)
-	//}
-	//defer resp.Body.Close()
-	//var buffer [512]byte
-	//result := bytes.NewBuffer(nil)
-	//for {
-	//	n, err := resp.Body.Read(buffer[0:])
-	//	result.Write(buffer[0:n])
-	//	if err != nil && err == io.EOF {
-	//		break
-	//	} else if err != nil {
-	//		panic(err)
-	//	}
-	//}
-	//return result.String()
 }
 
 // 校方session
 type GDUPTSession string
 
-func GetJSession() GDUPTSession {
+func GetJSession(config *Config) GDUPTSession {
 	resp, err := http.Get("http://yq.gdupt.edu.cn/")
 
 	defer resp.Body.Close()
 	if err != nil {
-		log.Println("[FAIL] 获取 JSESSIONID 错误")
+		log.Println("[FAIL] 获取JSESSIONID错误: " + config.Name + config.Username)
+		config.SendWeChatMessage("JSESSIONID错误"+config.Name+config.Username, "JSESSIONID错误")
 	}
 
 	homeCookie := resp.Header.Get("Set-Cookie")
 	a := strings.Index(homeCookie, ";")
-	log.Println("[INFO] 获取 JSESSIONID ", homeCookie[:a])
+	log.Println("[INFO] 获取JSESSIONID成功", homeCookie[:a], "->"+config.Name+config.Username)
+	// 随机随眠
+	RandomSleep(30)
 	return GDUPTSession(homeCookie[:a])
 }
 
@@ -108,7 +95,9 @@ func (gs GDUPTSession) GDUPTAddForm(config *Config) {
 	req, err := http.NewRequest(method, url0, payload)
 
 	if err != nil {
-		log.Println(err)
+		log.Println("[FAIL] 新建请求失败: " + config.Name + config.Username)
+		config.SendWeChatMessage("新建请求失败"+config.Name+config.Username, "新建请求失败")
+		return
 	}
 	req.Header.Add("Accept", "text/plain, */*; q=0.01")
 	req.Header.Add("Accept-Encoding", "gzip, deflate")
@@ -124,24 +113,26 @@ func (gs GDUPTSession) GDUPTAddForm(config *Config) {
 
 	res, err := client.Do(req)
 	if err != nil {
-		log.Println("[FAIL] 提交失败")
+		log.Println("[FAIL] 提交失败: " + config.Name + config.Username)
+		config.SendWeChatMessage("提交失败"+config.Name+config.Username, "提交失败")
 		return
 	}
 	body, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		log.Println("[FAIL] 提交失败")
+		log.Println("[FAIL] 提交失败: " + config.Name + config.Username)
+		config.SendWeChatMessage("提交失败"+config.Name+config.Username, "提交失败")
 		return
 	}
 	log.Println(string(body))
 	if string(body) == "success" && res.Status == "200 OK" {
-		log.Println("[INFO] 提交成功")
-		config.SendWeChatMessage("已成功提交疫情报告", "请勿多次提交")
+		log.Println("[INFO] 提交成功: " + config.Name + config.Username)
+		config.SendWeChatMessage("提交成功"+config.Name+config.Username, "请勿多次提交")
 	} else if string(body) == "Applied today" {
-		log.Println("[INFO] 不允许多次提交")
-		config.SendWeChatMessage("多次提交疫情报告", "请勿多次提交")
+		log.Println("[INFO] 多次提交: " + config.Name + config.Username)
+		config.SendWeChatMessage("多次提交"+config.Name+config.Username, "请勿多次提交")
 	} else {
-		log.Println("[INFO] 提交成功")
-		config.SendWeChatMessage("已成功提交疫情报告", "请勿多次提交")
+		log.Println("[INFO] 提交成功: " + config.Name + config.Username)
+		config.SendWeChatMessage("提交成功"+config.Name+config.Username, "请勿多次提交")
 	}
 }
 
@@ -176,7 +167,7 @@ func (gs GDUPTSession) GDUPTLogin(config *Config) bool {
 	body, _ := ioutil.ReadAll(resp.Body)
 	// log.Println("response Body:", string(body))
 	if string(body) == "" && resp.Status == "200 OK" {
-		log.Println("[INFO] 登录成功")
+		log.Println("[INFO] 登录成功: " + config.Name + config.Username)
 		return true
 	} else {
 		return false
@@ -185,6 +176,10 @@ func (gs GDUPTSession) GDUPTLogin(config *Config) bool {
 
 const configFileSizeLimit = 10 << 20
 
+type Configs struct {
+	Config []*Config `json:"configs"`
+}
+
 type Config struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
@@ -192,49 +187,51 @@ type Config struct {
 	Town     string `json:"town"`
 	ToSchool string `json:"toSchool"`
 	FT       string `json:"fangTang"`
+	Cron     string `json:"cron"`
+	Name     string `json:"name"`
 }
 
-func GetConfig() *Config {
-	config := LoadConfig("./config.json")
-	return config
+func GetConfig() *Configs {
+	configs := LoadConfig("./config.json")
+	return configs
 }
 
-func LoadConfig(path string) *Config {
-	var config Config
-	config_file, err := os.Open(path)
+func LoadConfig(path string) *Configs {
+	var configs Configs
+	configs_file, err := os.Open(path)
 	if err != nil {
 		emit("Failed to open config file '%s': %s\n", path, err)
-		return &config
+		return &configs
 	}
 
-	fi, _ := config_file.Stat()
+	fi, _ := configs_file.Stat()
 	if size := fi.Size(); size > (configFileSizeLimit) {
 		emit("config file (%q) size exceeds reasonable limit (%d) - aborting", path, size)
-		return &config // REVU: shouldn't this return an error, then?
+		return &configs
 	}
 
 	if fi.Size() == 0 {
 		emit("config file (%q) is empty, skipping", path)
-		return &config
+		return &configs
 	}
 
 	buffer := make([]byte, fi.Size())
-	_, err = config_file.Read(buffer)
+	_, err = configs_file.Read(buffer)
 
 	buffer, err = StripComments(buffer)
 	if err != nil {
 		emit("Failed to strip comments from json: %s\n", err)
-		return &config
+		return &configs
 	}
 
 	buffer = []byte(os.ExpandEnv(string(buffer)))
 
-	err = json.Unmarshal(buffer, &config)
+	err = json.Unmarshal(buffer, &configs)
 	if err != nil {
 		emit("Failed unmarshalling json: %s\n", err)
-		return &config
+		return &configs
 	}
-	return &config
+	return &configs
 }
 
 func StripComments(data []byte) ([]byte, error) {
@@ -258,6 +255,7 @@ func StripComments(data []byte) ([]byte, error) {
 func emit(msgfmt string, args ...interface{}) {
 	log.Printf(msgfmt, args...)
 }
+
 func ResultConfig(test []map[string]interface{}) (port_password []map[string]interface{}) {
 	return
 }
