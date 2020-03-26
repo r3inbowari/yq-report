@@ -22,19 +22,23 @@ func main() {
 	log.Println("[INFO] 当前系统时间:", time.Now().Format("2006-01-02 15:04:05"))
 	log.Println("[INFO] 疫情上报服务: 启用")
 	configs := GetConfig()
-	for _, config := range configs.Config {
-		log.Println("[INFO] 成功注册: " + config.Name + config.Username)
-		config.SendWeChatMessage(config.Name+config.Username+"成功注册", "已成功订阅")
-		c := cron.New()
-		_ = c.AddFunc(config.Cron, func() {
-			log.Println("[INFO] 开始上报: " + config.Name + config.Username)
-			session := GetJSession(config)
-			session.GDUPTLogin(config)
-			session.GDUPTAddForm(config)
-		})
-		c.Start()
+	for i := range configs {
+		fs(*configs[i])
 	}
 	select {}
+}
+
+func fs(config Config) {
+	log.Println("[INFO] 成功注册: " + config.Name + config.Username)
+	config.SendWeChatMessage(config.Name+config.Username+"成功注册", "已成功订阅")
+	c := cron.New()
+	_ = c.AddFunc(config.Cron, func() {
+		log.Println("[INFO] 开始上报: " + config.Name + config.Username)
+		session := GetJSession(&config)
+		session.GDUPTLogin(&config)
+		session.GDUPTAddForm(&config)
+	})
+	c.Start()
 }
 
 // 随机睡眠延时
@@ -72,7 +76,7 @@ func GetJSession(config *Config) GDUPTSession {
 	a := strings.Index(homeCookie, ";")
 	log.Println("[INFO] 获取JSESSIONID成功", homeCookie[:a], "->"+config.Name+config.Username)
 	// 随机随眠
-	RandomSleep(30)
+	// RandomSleep(30)
 	return GDUPTSession(homeCookie[:a])
 }
 
@@ -157,7 +161,8 @@ func (gs GDUPTSession) GDUPTLogin(config *Config) bool {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		log.Println("[FAIL] 登录失败: " + config.Name + config.Username)
+		config.SendWeChatMessage("登陆失败"+config.Name+config.Username, "登陆失败")
 		return false
 	}
 	defer resp.Body.Close()
@@ -166,6 +171,11 @@ func (gs GDUPTSession) GDUPTLogin(config *Config) bool {
 	// log.Println("response Headers:", resp.Header)
 	body, _ := ioutil.ReadAll(resp.Body)
 	// log.Println("response Body:", string(body))
+	if string(body) == "验证码输入错误！" {
+		log.Println("[FAIL] 验证码输入错误: " + config.Name + config.Username)
+		config.SendWeChatMessage("验证码输入错误"+config.Name+config.Username, "验证码输入错误")
+		return false
+	}
 	if string(body) == "" && resp.Status == "200 OK" {
 		log.Println("[INFO] 登录成功: " + config.Name + config.Username)
 		return true
@@ -191,9 +201,9 @@ type Config struct {
 	Name     string `json:"name"`
 }
 
-func GetConfig() *Configs {
+func GetConfig() []*Config {
 	configs := LoadConfig("./config.json")
-	return configs
+	return configs.Config
 }
 
 func LoadConfig(path string) *Configs {
