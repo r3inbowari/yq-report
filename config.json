@@ -7,7 +7,7 @@
       "toSchool": "未知",
       "town": "未知",
       "fangTang": "SCU37997Tdfdc86bf6a3f4d8b785de3c2f20d91fe5c1b7d3f9d7b6",
-      "cron": "0 6 7 * * ?",
+      "cron": "0 30 7 * * ?",
       "name": "陈海滨"
     },
     {
@@ -17,7 +17,7 @@
       "toSchool": "未知",
       "town": "未知",
       "fangTang": "SCU37997Tdfdc86bf6a3f4d8b785de3c2f20d91fe5c1b7d3f9d7b6",
-      "cron": "0 5 5 * * ?",
+      "cron": "0 35 7 * * ?",
       "name": "庞立晓"
     },
     {
@@ -27,7 +27,7 @@
       "toSchool": "未知",
       "town": "未知",
       "fangTang": "SCU37997Tdfdc86bf6a3f4d8b785de3c2f20d91fe5c1b7d3f9d7b6",
-      "cron": "0 2 3 * * ?",
+      "cron": "0 40 7 * * ?",
       "name": "卢家乐"
     }
   ]
