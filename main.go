@@ -34,6 +34,7 @@ func fs(config Config) {
 	c := cron.New()
 	_ = c.AddFunc(config.Cron, func() {
 		log.Println("[INFO] 开始上报: " + config.Name + config.Username)
+		RandomSleep(config.SleepUnit)
 		session := GetJSession(&config)
 		session.GDUPTLogin(&config)
 		session.GDUPTAddForm(&config)
@@ -43,9 +44,11 @@ func fs(config Config) {
 
 // 随机睡眠延时
 func RandomSleep(max int) {
-	rand.Seed(time.Now().UnixNano())
-	randTime := time.Duration(rand.Intn(max)) * time.Second
-	time.Sleep(randTime)
+	if max > 0 {
+		rand.Seed(time.Now().UnixNano())
+		randTime := time.Duration(rand.Intn(max)) * time.Second
+		time.Sleep(randTime)
+	}
 }
 
 // 方糖密钥 -> 微信报告
@@ -64,6 +67,7 @@ func GetRequest(url string) {
 type GDUPTSession string
 
 func GetJSession(config *Config) GDUPTSession {
+	RandomSleep(config.SleepUnit)
 	resp, err := http.Get("http://yq.gdupt.edu.cn/")
 
 	defer resp.Body.Close()
@@ -76,11 +80,13 @@ func GetJSession(config *Config) GDUPTSession {
 	a := strings.Index(homeCookie, ";")
 	log.Println("[INFO] 获取JSESSIONID成功", homeCookie[:a], "->"+config.Name+config.Username)
 	// 随机随眠
-	// RandomSleep(30)
+	RandomSleep(config.SleepUnit)
 	return GDUPTSession(homeCookie[:a])
 }
 
 func (gs GDUPTSession) GDUPTAddForm(config *Config) {
+	RandomSleep(config.SleepUnit)
+
 	url0 := "http://yq.gdupt.edu.cn/syt/zzapply/operation.htm"
 	method := "POST"
 	pl := `data={"xmqkb":{"id":"ff8080817056f727017057083b010001"},"pdnf":"2020","type":"yqsjsb","c5":"36-37.2°C","c6":"健康","c7":"健康","c8":"否","c9":"","c2":"","c3":"","c10":"","c11":"","c12":"","c1":"否","c4":""}&msgUrl=syt/zzglappro/index.htm?type=yqsjsb&xmid=ff8080817056f727017057083b010001`
@@ -191,14 +197,15 @@ type Configs struct {
 }
 
 type Config struct {
-	Username string `json:"username"`
-	Password string `json:"password"`
-	City     string `json:"city"`
-	Town     string `json:"town"`
-	ToSchool string `json:"toSchool"`
-	FT       string `json:"fangTang"`
-	Cron     string `json:"cron"`
-	Name     string `json:"name"`
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	City      string `json:"city"`
+	Town      string `json:"town"`
+	ToSchool  string `json:"toSchool"`
+	FT        string `json:"fangTang"`
+	Cron      string `json:"cron"`
+	Name      string `json:"name"`
+	SleepUnit int    `json:"sleepUnit"`
 }
 
 func GetConfig() []*Config {
