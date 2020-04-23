@@ -89,6 +89,7 @@ func (gs GDUPTSession) GDUPTAddForm(config *Config) {
 
 	url0 := "http://yq.gdupt.edu.cn/syt/zzapply/operation.htm"
 	method := "POST"
+	// ne := `data={"xmqkb":{"id":"ff8080817056f727017057083b010001"},"pdnf":"2020","type":"yqsjsb","c5":"36-37.2°C","c6":"健康","c7":"健康","c8":"否","c9":"","c2":"","c3":"","c10":"","c11":"","c12":"","c1":"否","c4":""}&msgUrl=syt/zzglappro/index.htm?type=yqsjsb&xmid=ff8080817056f727017057083b010001`
 	pl := `data={"xmqkb":{"id":"ff8080817056f727017057083b010001"},"pdnf":"2020","type":"yqsjsb","c5":"36-37.2°C","c6":"健康","c7":"健康","c8":"否","c9":"","c2":"","c3":"","c10":"","c11":"","c12":"","c1":"否","c4":""}&msgUrl=syt/zzglappro/index.htm?type=yqsjsb&xmid=ff8080817056f727017057083b010001`
 	// pl := `data={"xmqkb":{"id":"ff8080817056f727017057083b010001"},"pdnf":"2020","type":"yqsjsb","c5":"36-37.2°C","c6":"健康","c7":"健康","c8":"否","c9":"","c2":"` + config.City + `","c3":"` + config.Town + `","c10":"2020-03-01","c11":"` + config.ToSchool + `","c12":"否"}&msgUrl=syt/zzglappro/index.htm?type=yqsjsb&xmid=ff8080817056f727017057083b010001`
 	escapeUrl := url.QueryEscape(pl)
@@ -150,7 +151,7 @@ func (gs GDUPTSession) GDUPTLogin(config *Config) bool {
 
 	url := "http://yq.gdupt.edu.cn//login/Login.htm"
 
-	var jsonStr = []byte("username=" + config.Username + "&password=" + config.Password)
+	var jsonStr = []byte("username=" + config.Username + "&password=" + config.Password + "&verification=")
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
 
 	req.Header.Set("Accept", "text/html, */*; q=0.01")
@@ -158,7 +159,7 @@ func (gs GDUPTSession) GDUPTLogin(config *Config) bool {
 	req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9")
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Connection", "keep-alive")
-	req.Header.Set("Cookie", "username="+config.Username+"; "+string(gs)+" username="+config.Password)
+	req.Header.Set("Cookie", string(gs)+"; username="+config.Username+"; menuVisible=0")
 	req.Header.Set("Host", "yq.gdupt.edu.cn")
 	req.Header.Set("Referer", "http://yq.gdupt.edu.cn/")
 	req.Header.Set("Upgrade-Insecure-Requests", "1")
